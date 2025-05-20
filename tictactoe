@@ -72,7 +72,7 @@ end
 function draw_moves with moves, colour do
 // Draws the moves of the game making the circles start
 // Requires a set of moves and an input colour
-    for each move in moves indexed by index do
+  for each move in moves indexed by index do
     if move == "?" do
       change move to ai_move()
     end
