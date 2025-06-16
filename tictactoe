@@ -254,7 +254,6 @@ end
 
 function run_game with moves do
   log moves
-  // PRE-PROCESS MOVES: Replace "?" with AI move FIRST
   set processed_moves to []
   for each move in moves do
     if move == "?" do
@@ -264,23 +263,19 @@ function run_game with moves do
     end
   end
 
-  // NOW use processed_moves EVERYWHERE
   draw_moves(processed_moves, "black")
   
   if is_invalid_move(processed_moves) do
     return
   end
   
-  // CORRECTED: Use processed_moves instead of original moves
   set game_status to who_is_winner(processed_moves)
 
   if game_status != false do
     set winner to game_status[1]
     set winning_line to game_status[2]
-    // CORRECTED: Use processed_moves instead of original moves
     draw_winner(winner, processed_moves, winning_line)
   else if my#length(processed_moves) == 9 do
-    // CORRECTED: Use processed_moves instead of original moves
     draw_draw(processed_moves)
   end
 end
