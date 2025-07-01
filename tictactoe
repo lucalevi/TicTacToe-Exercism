@@ -1,201 +1,70 @@
-function draw_board do
-  // This function draws the game board
-  // Set the board variables
-  set board_x_offset to 5
-  set board_y_offset to board_x_offset
-  set board_width to 100 - board_x_offset * 2
-  set board_height to board_width
-  // Game board
-  rectangle(board_x_offset, board_y_offset, board_width, board_height)
-  // Horizontal lines
-  line(board_x_offset, board_width/3 + board_y_offset, board_width + board_x_offset, board_width/3 + board_y_offset)
-  line(board_x_offset, (board_width/3) * 2 + board_y_offset, board_width + board_x_offset, (board_width/3) * 2 + board_y_offset)
-  // Vertical lines
-  line(board_width/3 + board_x_offset, board_y_offset, board_width/3 + board_x_offset, board_height + board_y_offset)
-  line((board_width/3) * 2 + board_x_offset, board_y_offset, (board_width/3) * 2 + board_x_offset, board_height + board_y_offset)  
+function create_empty_board do
+  // Creates a 3x3 board initialized with empty cells ("")
+  set board to [
+    ["", "", ""],
+    ["", "", ""],
+    ["", "", ""]
+  ]
+  return board
 end
 
-
-function get_centre with coord do
-  // Get the centre of a celle given its row-column coordinates
-  // Coordinate example [2,2] ---> cell in the middle of the board
-
-  // Set the board and cell variables
-  set board_x_offset to 5
-  set board_y_offset to board_x_offset
-  set board_width to 100 - board_x_offset * 2
-  set cell_size to board_width / 3
-
-  // Calculate the centre x and centre y of the cell
-  log(coord)
-  set centre_x to board_x_offset + (coord[2] - 1) * cell_size + cell_size / 2
-  set centre_y to board_y_offset + (coord[1] - 1) * cell_size + cell_size / 2
-  
-  return [centre_x, centre_y]
+function place_piece_on_board with board, x, y, symbol do
+  // Places a piece (symbol: "x" or "o") at position [x,y] on the board
+  // Coordinates are 1-based, and JikiScript arrays are 1-based
+  change board[x][y] to symbol
+  return board
 end
 
-
-function draw_cross with coord, colour do
-  // Draw the crosses on the board
-  // Input: row-column coordinates of the board, colour for the stroke
-  stroke_color_hex(colour)
-  set centre to get_centre(coord)
-  set cross_width to 10
-  line(centre[1]-cross_width, centre[2]-cross_width, centre[1]+cross_width, centre[2]+cross_width)
-  line(centre[1]-cross_width, centre[2]+cross_width, centre[1]+cross_width, centre[2]-cross_width)
+function is_cell_empty with board, x, y do
+  // Checks if the cell at [x,y] is empty
+  // Coordinates are 1-based
+  return board[x][y] == ""
 end
 
-
-function draw_circle with coord, colour do
-  // Draw the circles on the board
-  // Input: row-column coordinates of the board, colour for the stroke
-  stroke_color_hex(colour)
-  set radius to 10
-  set centre to get_centre(coord)
-  circle(centre[1], centre[2], radius)
+function get_all_possible_moves do
+  // Returns a list of all possible [row,col] coordinates
+  set possible_moves to [
+    [1,1], [1,2], [1,3],
+    [2,1], [2,2], [2,3],
+    [3,1], [3,2], [3,3]
+  ]
+  return possible_moves
 end
 
+function ai_move with moves do
+  // Determines the best move for the AI when "?" is encountered
+  // AI is "o" (odd index: 1,3,5) or "x" (even index: 2,4,6)
+  // moves: list of [row,col] pairs or "?"
 
-function ai_move do
-  return [2,3]
-end
-
-function draw_moves with moves, colour do
-  for each move in moves indexed by index do
-    // REMOVED the "?" handling here
-    if index % 2 == 0 do
-      draw_cross(move, colour)
-    else do
-      draw_circle(move, colour)
-    end
-  end
-end
-
-
-function draw_draw with moves do
-// Draws a draw game by drawing the moves in grey colour
-// and drawing a square announcing the draw
-  draw_moves(moves, "gray")
-  fill_color_rgba(96, 79, 205, 0.85)
-  rectangle(0,0,100,100)
-  write("The game was a draw!")
-end
-
-
-function get_string_coordinates with moves do
-  set string_coordinates to []
-  set str_coord to []
-  for each move in moves do
-    // Directly convert numerical coordinates
-    change str_coord to convert_numerical_coord_to_string(move)
-    change string_coordinates to push(string_coordinates, str_coord)
-  end
-  return string_coordinates
-end
-
-function convert_numerical_coord_to_string with num_coord do
-  // Handle unexpected "?" input gracefully
-  if num_coord == "?" do
-    log "Warning: Received '?' in numerical conversion function"
-    return "??"
-  end
-  
-  return concatenate(my#number_to_string(num_coord[1]), my#number_to_string(num_coord[2]))
-end
-
-
-function is_invalid_move with coordinates do
-  // Checks whether a move is valid or not by checking if
-  // there are already occupied cells in the coordinates
-
-  // Initialise the seen coordinates, the coordinates
-  // that have already been seen
-  set seen_coordinates to [] 
-
-  // Convert a list of lists of coordinate pairs to their
-  // string equivalent using the helper function "get_string_coordinates"
-  change coordinates to get_string_coordinates(coordinates)
-
-  // Check if the coordinate is already present
-  for each coordinate in coordinates do
-  // If so, raise a visual error and exit the loop
-    if my#contains(seen_coordinates, coordinate) do
-      fill_color_rgba(200, 0, 0, 0.85)
-      rectangle(0,0,100,100)
-      write("Invalid move!")
-      return true
-      break
-  // If the coordinate is not present, push it into the seen list
-    else do
-      change seen_coordinates to push(seen_coordinates, coordinate)
-    end
-  end
-  return false
-end
-
-
-function check_player_win with player_numerical_moves, all_winning_combinations_strings do
-  // player_numerical_moves is a list of [row,col] pairs, e.g., [[1,1], [1,2], [1,3]]
-  // all_winning_combinations_strings is a list of string-based combos, e.g., [["11","12","13"], ...]
-
-  if my#length(player_numerical_moves) < 3 do
-    return false // Not enough moves to win
+  // Determine whose turn it is based on the next move index
+  set move_count to my#length(moves) + 1// Next move index
+  set ai_symbol to "o"
+  if move_count % 2 == 0 do
+    change ai_symbol to "x"
   end
 
-  // Create a list of the player's moves as strings (e.g., ["11", "12", "13"]) for easy checking
-  set player_string_moves to []
-  for each num_move in player_numerical_moves do
-    change player_string_moves to push(player_string_moves, convert_numerical_coord_to_string(num_move))
+  set opponent_symbol to "x"
+  if ai_symbol == "x" do
+    change opponent_symbol to "o"
   end
 
-  set cell1_is_in_combo to 0
-  set cell2_is_in_combo to 0
-  set cell3_is_in_combo to 0
-  for each string_combo in all_winning_combinations_strings do
-    // string_combo is a list of 3 strings, e.g., ["11", "12", "13"]
-    change cell1_is_in_combo to my#contains(player_string_moves, string_combo[1])
-    change cell2_is_in_combo to my#contains(player_string_moves, string_combo[2])
-    change cell3_is_in_combo to my#contains(player_string_moves, string_combo[3])
-
-    if cell1_is_in_combo and cell2_is_in_combo and cell3_is_in_combo do
-      // Player has this winning string_combo. Now find the corresponding numerical coordinates.
-      set actual_winning_numerical_coords to []
-      set p_str_coord to 0
-      for each p_num_coord in player_numerical_moves do
-        change p_str_coord to convert_numerical_coord_to_string(p_num_coord)
-        // Check if this player's move is part of the winning string_combo
-        if p_str_coord == string_combo[1] or p_str_coord == string_combo[2] or p_str_coord == string_combo[3] do
-          change actual_winning_numerical_coords to push(actual_winning_numerical_coords, p_num_coord)
-        end
-      end
-      // We expect exactly 3 coordinates for a winning line
-      if my#length(actual_winning_numerical_coords) == 3 do
-         return actual_winning_numerical_coords // Return list of [r,c] win coords
-      else do
-        // This case should ideally not happen if logic is correct and no duplicate moves
-        log "Error: Found winning combo but couldn't retrieve 3 unique numerical coords."
-      end
-    end
-  end
-
-  return false // No winning line found for this player
-end
-
-
-function who_is_winner with moves do
-  set noughts_moves_coords to [] // Will store numerical coords like [[1,1], [2,1]]
-  set crosses_moves_coords to [] // Will store numerical coords
-
-  // Separate moves based on player turn (Crosses 'x' on even indices 2,4,6...)
+  // Create and populate the board
+  set board to create_empty_board()
+  set processed_moves to []
+  set symbol to "o"
   for each move in moves indexed by idx do
-    if idx % 2 == 0 do // Crosses' turn
-      change crosses_moves_coords to push(crosses_moves_coords, move)
-    else do // Noughts' turn
-      change noughts_moves_coords to push(noughts_moves_coords, move)
+    if move == "?" do
+      continue
     end
+    change symbol to "o"
+    if idx % 2 == 0 do
+      change symbol to "x"
+    end
+    change board to place_piece_on_board(board, move[1], move[2], symbol)
+    change processed_moves to push(processed_moves, move)
   end
 
-  // Define all possible winning combinations as strings
+  // Define winning combinations as strings
   set winning_combinations_as_strings to [
     ["11", "12", "13"], // Row 1
     ["21", "22", "23"], // Row 2
@@ -207,70 +76,250 @@ function who_is_winner with moves do
     ["13", "22", "31"]  // Diagonal (top-right to bottom-left)
   ]
 
-  // Check if Crosses ('x') have a winning combination
-  set crosses_win_line_numerical to check_player_win(crosses_moves_coords, winning_combinations_as_strings)
-  if crosses_win_line_numerical != false do
-    // crosses_win_line_numerical is the list of 3 numerical coords, e.g., [[1,1],[1,2],[1,3]]
-    return ["x", crosses_win_line_numerical]
+  // 1. Check for a winning move
+  set ai_player_moves to []
+  set win_check to true
+  for each move in get_all_possible_moves() do
+    if is_cell_empty(board, move[1], move[2]) do
+      // Collect AI's previous moves
+      change ai_player_moves to []
+      for each m in processed_moves indexed by i do
+        if (ai_symbol == "x" and i % 2 == 0) or (ai_symbol == "o" and i % 2 == 1) do
+          change ai_player_moves to push(ai_player_moves, m)
+        end
+      end
+      // Add simulated AI move
+      change ai_player_moves to push(ai_player_moves, move)
+      change win_check to check_player_win(ai_player_moves, winning_combinations_as_strings)
+      if win_check != false do
+        return move // Winning move found
+      end
+    end
   end
 
-  // Check if Noughts ('o') have a winning combination
-  set noughts_win_line_numerical to check_player_win(noughts_moves_coords, winning_combinations_as_strings)
-  if noughts_win_line_numerical != false do
-    // noughts_win_line_numerical is the list of 3 numerical coords
-    return ["o", noughts_win_line_numerical]
+  // 2. Check for a blocking move
+  set opponent_player_moves to []
+  for each move in get_all_possible_moves() do
+    if is_cell_empty(board, move[1], move[2]) do
+      // Collect opponent's previous moves
+      change opponent_player_moves to []
+      for each m in processed_moves indexed by i do
+        if (opponent_symbol == "x" and i % 2 == 0) or (opponent_symbol == "o" and i % 2 == 1) do
+          change opponent_player_moves to push(opponent_player_moves, m)
+        end
+      end
+      // Add simulated opponent move
+      change opponent_player_moves to push(opponent_player_moves, move)
+      change win_check to check_player_win(opponent_player_moves, winning_combinations_as_strings)
+      if win_check != false do
+        return move // Blocking move found
+      end
+    end
   end
 
-  // If no player has won yet
+  // 3. Choose a sensible move: prefer center, then corners, then edges
+  set preferred_moves to [
+    [2,2], // Center
+    [1,1], [1,3], [3,1], [3,3], // Corners
+    [1,2], [2,1], [2,3], [3,2]  // Edges
+  ]
+  for each move in preferred_moves do
+    if is_cell_empty(board, move[1], move[2]) do
+      return move
+    end
+  end
+
+  // Fallback: should not reach here if board isn't full
+  return [2,3]
+end
+
+function draw_board do
+  // This function draws the game board
+  set board_x_offset to 5
+  set board_y_offset to board_x_offset
+  set board_width to 100 - board_x_offset * 2
+  set board_height to board_width
+  rectangle(board_x_offset, board_y_offset, board_width, board_height)
+  line(board_x_offset, board_width/3 + board_y_offset, board_width + board_x_offset, board_width/3 + board_y_offset)
+  line(board_x_offset, (board_width/3) * 2 + board_y_offset, board_width + board_x_offset, (board_width/3) * 2 + board_y_offset)
+  line(board_width/3 + board_x_offset, board_y_offset, board_width/3 + board_x_offset, board_height + board_y_offset)
+  line((board_width/3) * 2 + board_x_offset, board_y_offset, (board_width/3) * 2 + board_x_offset, board_height + board_y_offset)
+end
+
+function get_centre with coord do
+  // Get the centre of a cell given its row-column coordinates
+  set board_x_offset to 5
+  set board_y_offset to board_x_offset
+  set board_width to 100 - board_x_offset * 2
+  set cell_size to board_width / 3
+  set centre_x to board_x_offset + (coord[2] - 1) * cell_size + cell_size / 2
+  set centre_y to board_y_offset + (coord[1] - 1) * cell_size + cell_size / 2
+  return [centre_x, centre_y]
+end
+
+function draw_cross with coord, colour do
+  stroke_color_hex(colour)
+  set centre to get_centre(coord)
+  set cross_width to 10
+  line(centre[1]-cross_width, centre[2]-cross_width, centre[1]+cross_width, centre[2]+cross_width)
+  line(centre[1]-cross_width, centre[2]+cross_width, centre[1]+cross_width, centre[2]-cross_width)
+end
+
+function draw_circle with coord, colour do
+  stroke_color_hex(colour)
+  set radius to 10
+  set centre to get_centre(coord)
+  circle(centre[1], centre[2], radius)
+end
+
+function draw_moves with moves, colour do
+  for each move in moves indexed by index do
+    if index % 2 == 0 do
+      draw_cross(move, colour)
+    else do
+      draw_circle(move, colour)
+    end
+  end
+end
+
+function draw_draw with moves do
+  draw_moves(moves, "gray")
+  fill_color_rgba(96, 79, 205, 0.85)
+  rectangle(0,0,100,100)
+  write("The game was a draw!")
+end
+
+function get_string_coordinates with moves do
+  set string_coordinates to []
+  set str_coord to []
+  for each move in moves do
+    change str_coord to convert_numerical_coord_to_string(move)
+    change string_coordinates to push(string_coordinates, str_coord)
+  end
+  return string_coordinates
+end
+
+function convert_numerical_coord_to_string with num_coord do
+  if num_coord == "?" do
+    log "Warning: Received '?' in numerical conversion function"
+    return "??"
+  end
+  return concatenate(my#number_to_string(num_coord[1]), my#number_to_string(num_coord[2]))
+end
+
+function is_invalid_move with coordinates do
+  set seen_coordinates to []
+  change coordinates to get_string_coordinates(coordinates)
+  for each coordinate in coordinates do
+    if my#contains(seen_coordinates, coordinate) do
+      fill_color_rgba(200, 0, 0, 0.85)
+      rectangle(0,0,100,100)
+      write("Invalid move!")
+      return true
+      break
+    else do
+      change seen_coordinates to push(seen_coordinates, coordinate)
+    end
+  end
   return false
 end
 
+function check_player_win with player_numerical_moves, all_winning_combinations_strings do
+  if my#length(player_numerical_moves) < 3 do
+    return false
+  end
+  set player_string_moves to []
+  for each num_move in player_numerical_moves do
+    change player_string_moves to push(player_string_moves, convert_numerical_coord_to_string(num_move))
+  end
+  set cell1_is_in_combo to 0
+  set cell2_is_in_combo to 0
+  set cell3_is_in_combo to 0
+  for each string_combo in all_winning_combinations_strings do
+    change cell1_is_in_combo to my#contains(player_string_moves, string_combo[1])
+    change cell2_is_in_combo to my#contains(player_string_moves, string_combo[2])
+    change cell3_is_in_combo to my#contains(player_string_moves, string_combo[3])
+    if cell1_is_in_combo and cell2_is_in_combo and cell3_is_in_combo do
+      set actual_winning_numerical_coords to []
+      set p_str_coord to 0
+      for each p_num_coord in player_numerical_moves do
+        change p_str_coord to convert_numerical_coord_to_string(p_num_coord)
+        if p_str_coord == string_combo[1] or p_str_coord == string_combo[2] or p_str_coord == string_combo[3] do
+          change actual_winning_numerical_coords to push(actual_winning_numerical_coords, p_num_coord)
+        end
+      end
+      if my#length(actual_winning_numerical_coords) == 3 do
+        return actual_winning_numerical_coords
+      else do
+        log "Error: Found winning combo but couldn't retrieve 3 unique numerical coords."
+      end
+    end
+  end
+  return false
+end
+
+function who_is_winner with moves do
+  set noughts_moves_coords to []
+  set crosses_moves_coords to []
+  for each move in moves indexed by idx do
+    if idx % 2 == 0 do
+      change crosses_moves_coords to push(crosses_moves_coords, move)
+    else do
+      change noughts_moves_coords to push(noughts_moves_coords, move)
+    end
+  end
+  set winning_combinations_as_strings to [
+    ["11", "12", "13"],
+    ["21", "22", "23"],
+    ["31", "32", "33"],
+    ["11", "21", "31"],
+    ["12", "22", "32"],
+    ["13", "23", "33"],
+    ["11", "22", "33"],
+    ["13", "22", "31"]
+  ]
+  set crosses_win_line_numerical to check_player_win(crosses_moves_coords, winning_combinations_as_strings)
+  if crosses_win_line_numerical != false do
+    return ["x", crosses_win_line_numerical]
+  end
+  set noughts_win_line_numerical to check_player_win(noughts_moves_coords, winning_combinations_as_strings)
+  if noughts_win_line_numerical != false do
+    return ["o", noughts_win_line_numerical]
+  end
+  return false
+end
 
 function draw_winner with winner_symbol, all_moves, winning_line_numerical_coords do
-  // winner_symbol is "x" or "o"
-  // all_moves is the original list of all moves like [[1,1], [2,2], ...]
-  // winning_line_numerical_coords is like [[1,1], [1,2], [1,3]]
-
-  // 1. Turn all the x's and o's to a light grey.
   draw_moves(all_moves, "gray")
-
-  // 2. Display the winner announcement message
-  fill_color_rgba(96, 79, 205, 0.85) // Background for message
+  fill_color_rgba(96, 79, 205, 0.85)
   rectangle(0,0,100,100)
-  write(concatenate("The ", winner_symbol, "'s won!")) // Text message
-
-  // 3. Highlight the winning row/column/diagonal in purple.
+  write(concatenate("The ", winner_symbol, "'s won!"))
   set purple_color to "#604fcd"
-
   for each coord_to_highlight in winning_line_numerical_coords do
     if winner_symbol == "x" do
       draw_cross(coord_to_highlight, purple_color)
-    else if winner_symbol == "o" do // Assuming winner_symbol can only be "x" or "o" here
+    else if winner_symbol == "o" do
       draw_circle(coord_to_highlight, purple_color)
     end
   end
 end
 
-
 function run_game with moves do
   log moves
   set processed_moves to []
-  for each move in moves do
+  for each move in moves indexed by idx do
     if move == "?" do
-      change processed_moves to push(processed_moves, ai_move())
+      change processed_moves to push(processed_moves, ai_move(processed_moves))
     else do
       change processed_moves to push(processed_moves, move)
     end
   end
-
+  draw_board()
   draw_moves(processed_moves, "black")
-  
   if is_invalid_move(processed_moves) do
     return
   end
-  
   set game_status to who_is_winner(processed_moves)
-
   if game_status != false do
     set winner to game_status[1]
     set winning_line to game_status[2]
@@ -279,5 +328,3 @@ function run_game with moves do
     draw_draw(processed_moves)
   end
 end
-
-draw_board()
